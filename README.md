@@ -23,7 +23,6 @@ To run the analysis, you will need to have R and the following packages installe
 - ggpubr
 - AUCell
 - CellChat
-- 
 
 You can install these packages using the following commands:
 
