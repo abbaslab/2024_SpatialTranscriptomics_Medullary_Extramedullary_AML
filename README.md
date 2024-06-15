@@ -2,7 +2,7 @@
  
 # Spatial Transcriptomic Profiling of Medullary and Extramedullary Acute Myeloid Leukemia (AML)
 
-This repository contains the code and analysis for the paper titled "Spatial Transcriptomic Profiling Reveals Inflammation and Trans-differentiation States of Acute Myeloid Leukemia in Extramedullary and Medullary Tissues."
+This repository contains the code and analysis for the paper titled "Spatial Transcriptomics Reveals Inflammation and Trans-differentiation States of Acute Myeloid Leukemia in Extramedullary and Medullary Tissues."
 
 *Dasdemir et al. 2024*
 
