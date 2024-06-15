@@ -27,7 +27,7 @@ To run the analysis, you will need to have R and the following packages installe
 You can install these packages using the following commands:
 
 ```R
-install.packages(c("ggplot2", "dplyr", "ggthemes", "RColorBrewer", "ggpubr", "harmony", ))
+install.packages(c("ggplot2", "dplyr", "ggthemes", "RColorBrewer", "ggpubr", "harmony"))
 install.packages("Seurat")
 # Install Bioconductor packages
 if (!require("BiocManager", quietly = TRUE))
