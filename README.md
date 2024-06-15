@@ -4,6 +4,8 @@
 
 This repository contains the code and analysis for the paper titled "Spatial Transcriptomic Profiling Reveals Inflammation and Trans-differentiation States of Acute Myeloid Leukemia in Extramedullary and Medullary Tissues."
 
+*Dasdemir et al. 2024*
+
 ## Overview
 
 This study provides a comprehensive spatial transcriptomic analysis of both medullary and extramedullary AML tissues. Using Visium and GeoMx spatial transcriptomics technologies, we explored the spatial distribution of cell types, identified key inflammatory pathways, and mapped the microenvironment of AML. The repository includes the R scripts used for data processing, visualization, and analysis as described in the manuscript.
