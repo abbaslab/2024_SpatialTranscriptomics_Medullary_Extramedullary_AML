@@ -1,8 +1,9 @@
 ########################## Figure 3 Codes ######################################
 ############################ Data Import #######################################
 # Load Libraries
-required_packages <- c("Seurat", "ggplot2", "dplyr", "SCP", "SpaCET", "ggthemes", "RColorBrewer")
+required_packages <- c("Seurat", "ggplot2", "dplyr", "SCP", "SpaCET", "ggthemes", "RColorBrewer", "ComplexHeatmap", "circlize", "grid")
 lapply(required_packages, require, character.only = TRUE)
+
 # Load RDS files
 scRNA_Ref <- readRDS("/path/to/scRNA/Reference.RDS")
 BM1_filtered <- readRDS("/path/to/data/BM1_filtered.RDS")
@@ -91,14 +92,124 @@ ggsave("/path/to/Figures/BM1_CD8_Naive_Box.pdf")
 ############################# Figure 3F #########################################
 #################################################################################
 
+# Get the current features
+current_features <- rownames(EM1_filtered[["propMatFromSpaCET"]])
 
+# Identify the features to keep (excluding the ones want to remove)
+features_to_keep <- setdiff(current_features, c("Malignant", "Malignant cell state A", "Malignant cell state B", "cDC1 CLEC9A", "Macrophage other", "Macrophage M2", "cDC3 LAMP3", "Macrophage M1", "B cell switched memory", "B cell exhausted", "B cell non-switched memory", "B cell naive", "Tfh", "Th17", "Th1", "Th2", "cDC2 CD1C", "Unidentifiable"))
+features_to_keep
 
+# Extract the data matrix and subset to include only the features want to keep
+data_matrix <- GetAssayData(EM1_filtered[["propMatFromSpaCET"]], slot = "data")
+data_matrix_subset <- data_matrix[features_to_keep, ]
 
+# Update the assay with the subsetted data matrix
+DefaultAssay(EM1_filtered) <- "SCT"
+EM1_filtered[["SpaCET_Subset"]] <- CreateAssayObject(data = data_matrix_subset)
+DefaultAssay(EM1_filtered) <- "SpaCET_Subset"
 
+# Extract the deconvolution scores matrix
+deconv_scores <- GetAssayData(EM1_filtered[["SpaCET_Subset"]], slot = "data")
 
+# Calculate the correlation matrix
+correlation_matrix <- cor(t(deconv_scores))
 
+# Calculate the mean deconvolution score for each cell type
+cell_type_abundance <- rowMeans(deconv_scores)
 
+# Function to determine significance stars based on absolute correlation values
+get_correlation_stars <- function(correlation_value) {
+  if (abs(correlation_value) > 0.7) {
+    return("***")
+  } else if (abs(correlation_value) > 0.5) {
+    return("**")
+  } else {
+    return("")
+  }
+}
+
+# Create a matrix to hold the stars based on correlation values
+correlation_stars_matrix <- matrix(nrow = nrow(correlation_matrix), ncol = ncol(correlation_matrix))
+for (i in 1:nrow(correlation_matrix)) {
+  for (j in 1:ncol(correlation_matrix)) {
+    correlation_stars_matrix[i, j] <- get_correlation_stars(correlation_matrix[i, j])
+  }
+}
+
+# Customize colors for the heatmap (Blue to White to Red)
+custom_col_fun <- colorRamp2(c(-2, -1, 0, 1, 2), c("#053061", "#2166AC", "white", "#B2182B", "#67001F"))
+
+# Create a heatmap annotation for cell type abundance
+abundance_annotation <- rowAnnotation(
+  Abundance = anno_barplot(
+    cell_type_abundance, 
+    gp = gpar(fill = "darkgray", col = "black"),
+    border = TRUE, 
+    axis_param = list(side = "top"),
+    width = unit(2, "cm")
+  )
+)
+
+# Create the heatmap with additional customizations
+heatmap <- Heatmap(
+  correlation_matrix,
+  name = "Correlation",
+  col = custom_col_fun,
+  cluster_rows = TRUE,
+  cluster_columns = TRUE,
+  show_row_names = TRUE,
+  show_column_names = TRUE,
+  row_names_gp = gpar(fontsize = 10, fontface = "bold"),
+  column_names_gp = gpar(fontsize = 10, fontface = "bold"),
+  heatmap_legend_param = list(
+    title = "Correlation",
+    title_gp = gpar(fontsize = 12, fontface = "bold"),
+    labels_gp = gpar(fontsize = 10),
+    legend_height = unit(4, "cm")
+  ),
+  right_annotation = abundance_annotation,
+  top_annotation = HeatmapAnnotation(
+    text = anno_text(colnames(correlation_matrix), rot = 45, just = "right", gp = gpar(fontsize = 10))
+  ),
+  border = TRUE,
+  cell_fun = function(j, i, x, y, width, height, fill) {
+    grid.rect(x = x, y = y, width = width, height = height, gp = gpar(col = "black", fill = NA, lwd = 0.2))
+    if (correlation_stars_matrix[i, j] != "") {
+      grid.text(correlation_stars_matrix[i, j], x = x, y = y, gp = gpar(fontsize = 15, col = "black"))
+    }
+  }
+)
+
+# Save the heatmap as a high-resolution PDF
+pdf("/path/to/Figures/EM1_CoLocalization_Matrix.pdf", width = 14, height = 14)
+draw(heatmap)
+dev.off()
 
 #################################################################################
 ############################# Figure 3G #########################################
 #################################################################################
+
+# Add deconvolution scores as features
+EM1_filtered <- AddFeaturesFromAssay(EM1_filtered, assay = "propMatFromSpaCET", prefix = "Spacet_") # This function defined at Figure 2
+
+# Spatial Map for macrophage on EM1
+SpatialFeaturePlot(EM1_filtered, features = "Spacet_Macrophage", crop = F, pt.size.factor = 1.25, alpha = c(0,7), stroke = 0)
+ggsave("/path/to/Figures/Macrophage_Alpha_Spatial.pdf")
+
+# Violin Plot for Macrophages on EM1
+p <- FeatureStatPlot(EM1_filtered, group.by = "seurat_clusters", stat.by = "Spacet_Macrophage", add_point = T, palcolor = seurat_cols, add_box = T, comparisons = list(c('2','1'), c('1', '0'), c('1', 0)))
+panel_fix(p, height = 4, width = 3.5, save = "/path/to/Figures/EM1_Macrophages_Clusters_VlnPlot.pdf")
+
+# Spatial Map for cDC on EM1
+SpatialFeaturePlot(EM1_filtered, features = "Spacet_cDC", crop = F, pt.size.factor = 1.25, alpha = c(0,7), stroke = 0)
+ggsave("/path/to/Figures/cDC_Alpha_Spatial.pdf")
+
+# Violin Plot for cDCs on EM1
+p <- FeatureStatPlot(EM1_filtered, group.by = "seurat_clusters", stat.by = "Spacet_cDC", add_point = T, palcolor = seurat_cols, add_box = T, comparisons = list(c('2','1'), c('1', '0'), c('1', 0)))
+panel_fix(p, height = 4, width = 3.5, save = "/path/to/Figures/EM1_cDCs_Clusters_VlnPlot.pdf")
+
+
+
+
+
+
